@@ -1,60 +1,28 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import Button from './Button';
-
-/**
- * Custom hook for managing tasks with localStorage persistence
- */
-const useLocalStorageTasks = () => {
-  // Initialize state from localStorage or with empty array
-  const [tasks, setTasks] = useState(() => {
-    const savedTasks = localStorage.getItem('tasks');
-    return savedTasks ? JSON.parse(savedTasks) : [];
-  });
-
-  // Update localStorage when tasks change
-  useEffect(() => {
-    localStorage.setItem('tasks', JSON.stringify(tasks));
-  }, [tasks]);
-
-  // Add a new task
-  const addTask = (text) => {
-    if (text.trim()) {
-      setTasks([
-        ...tasks,
-        {
-          id: Date.now(),
-          text,
-          completed: false,
-          createdAt: new Date().toISOString(),
-        },
-      ]);
-    }
-  };
-
-  // Toggle task completion status
-  const toggleTask = (id) => {
-    setTasks(
-      tasks.map((task) =>
-        task.id === id ? { ...task, completed: !task.completed } : task
-      )
-    );
-  };
-
-  // Delete a task
-  const deleteTask = (id) => {
-    setTasks(tasks.filter((task) => task.id !== id));
-  };
-
-  return { tasks, addTask, toggleTask, deleteTask };
-};
+import { useTasks } from '../context/TaskContext';
+import { useTheme } from '../context/ThemeContext';
 
 /**
  * TaskManager component for managing tasks
  */
 const TaskManager = () => {
-  const { tasks, addTask, toggleTask, deleteTask } = useLocalStorageTasks();
-  const [newTaskText, setNewTaskText] = useState('');
-  const [filter, setFilter] = useState('all');
+  const {
+    tasks,
+    loading,
+    error,
+    hasMore,
+    searchQuery,
+    filter,
+    setSearchQuery,
+    setFilter,
+    handleSearch,
+    toggleTask,
+    loadMore,
+    addTask,
+    deleteTask
+  } = useTasks();
+  const { isDark } = useTheme();
 
   // Filter tasks based on selected filter
   const filteredTasks = tasks.filter((task) => {
@@ -63,32 +31,47 @@ const TaskManager = () => {
     return true; // 'all' filter
   });
 
-  // Handle form submission
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    addTask(newTaskText);
-    setNewTaskText('');
-  };
-
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-      <h2 className="text-2xl font-bold mb-6">Task Manager</h2>
+      <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">Task Manager</h2>
 
-      {/* Task input form */}
-      <form onSubmit={handleSubmit} className="mb-6">
+      {/* Add task form */}
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          const form = e.target;
+          const input = form.elements['newTask'];
+          addTask({ title: input.value });
+          input.value = '';
+        }}
+        className="mb-4"
+      >
         <div className="flex gap-2">
           <input
+            name="newTask"
             type="text"
-            value={newTaskText}
-            onChange={(e) => setNewTaskText(e.target.value)}
             placeholder="Add a new task..."
             className="flex-grow px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
           />
           <Button type="submit" variant="primary">
-            Add Task
+            Add
           </Button>
         </div>
       </form>
+
+      {/* Search input */}
+      <div className="mb-6">
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => {
+            setSearchQuery(e.target.value);
+            handleSearch(e.target.value);
+          }}
+          placeholder="Search tasks..."
+          className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+        />
+      </div>
 
       {/* Filter buttons */}
       <div className="flex gap-2 mb-4">
@@ -115,11 +98,25 @@ const TaskManager = () => {
         </Button>
       </div>
 
+      {/* Error message */}
+      {error && (
+        <div className="mb-4 p-4 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-100 rounded-lg">
+          {error}
+        </div>
+      )}
+
+      {/* Loading state */}
+      {loading && (
+        <div className="flex justify-center items-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+        </div>
+      )}
+
       {/* Task list */}
       <ul className="space-y-2">
         {filteredTasks.length === 0 ? (
           <li className="text-gray-500 dark:text-gray-400 text-center py-4">
-            No tasks found
+            {loading ? 'Loading tasks...' : 'No tasks found'}
           </li>
         ) : (
           filteredTasks.map((task) => (
@@ -136,24 +133,30 @@ const TaskManager = () => {
                 />
                 <span
                   className={`${
-                    task.completed ? 'line-through text-gray-500 dark:text-gray-400' : ''
+                    task.completed ? 'line-through text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-white'
                   }`}
                 >
-                  {task.text}
+                  {task.title}
                 </span>
               </div>
-              <Button
-                variant="danger"
-                size="sm"
-                onClick={() => deleteTask(task.id)}
-                aria-label="Delete task"
-              >
-                Delete
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button variant="danger" size="sm" onClick={() => deleteTask(task.id)}>
+                  Delete
+                </Button>
+              </div>
             </li>
           ))
         )}
       </ul>
+
+      {/* Load more button */}
+      {hasMore && !loading && (
+        <div className="mt-6 text-center">
+          <Button variant="secondary" onClick={loadMore}>
+            Load More
+          </Button>
+        </div>
+      )}
 
       {/* Task stats */}
       <div className="mt-6 text-sm text-gray-500 dark:text-gray-400">

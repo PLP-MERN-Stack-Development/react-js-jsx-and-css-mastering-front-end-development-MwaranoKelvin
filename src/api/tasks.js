@@ -1,69 +1,65 @@
-/**
- * Sample tasks data for the task manager app
- */
+import axios from 'axios';
 
-const tasks = [
-    {
-        id: 1,
-        title: "Complete React Assignment",
-        descriprion: "Finish the week 3 React JS assignment with all requirements.",
-        completed: false,
-        dueDate: "2025-08-10",
-        priority: "High",
-    },
-    {
-        id: 2,
-        title: "Review pull requests",
-        descriprion: "Review and merge pending pull requests on GitHub.",
-        completed: false,
-        dueDate: "2025-08-07",
-        priority: "Medium",
-    },
-    {
-        id :3,
-        title: "Plan nect Sprint",
-        descriprion: "Organize tasks and goals for the next development sprint.",
-        completed: false,
-        dueDate: "2025-08-12",
-        priority: "Low",
-    },
-    {
-        id: 4,
-        title: "Team Meeting",
-        descriprion: "Discuss project progress and blockers with the team.",
-        completed: true,
-        dueDate: "2025-08-05",
-        priority: "Meduim",
-    },
-];
+const API_BASE_URL = 'https://jsonplaceholder.typicode.com';
 
 /**
- * Fetch all tasks
- * @returns {Promise<Array>}
+ * Fetches tasks from the API
+ * @param {number} page - Page number for pagination
+ * @param {number} limit - Number of items per page
+ * @returns {Promise<{data: Array, total: number}>} Tasks data and total count
+ * @throws {Error} API error
  */
-export function fetchTasks() {
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            resolve(tasks);
-        }, 500); // Simulate network delay
+export const fetchTasks = async (page = 1, limit = 10) => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/todos`, {
+      params: {
+        _page: page,
+        _limit: limit,
+      },
     });
-}
+    
+    return {
+      data: response.data,
+      total: parseInt(response.headers['x-total-count'] || '0', 10),
+    };
+  } catch (error) {
+    throw new Error('Failed to fetch tasks: ' + error.message);
+  }
+};
 
 /**
- * Toggle Tasks Completion status by id
- * @param {number} id
- * @returns {Promise<Object>}
+ * Searches tasks based on title
+ * @param {string} query - Search query
+ * @returns {Promise<Array>} Filtered tasks
+ * @throws {Error} API error
  */
-export function toggleTaskCompletion(id) {
-    return new Promise((resolve, reject) => {
-        const task = tasks.find((t) => t.id === id);
-        if (!task) {
-            reject(new Error('Task not found'));
-            return;
-        }
-        task.completed = !task.completed;
-        setTimeout(() => resolve(tasks), 300);
+export const searchTasks = async (query) => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/todos`, {
+      params: {
+        q: query,
+      },
     });
-}
+    return response.data;
+  } catch (error) {
+    throw new Error('Failed to search tasks: ' + error.message);
+  }
+};
 
-export default tasks;
+/**
+ * Toggles task completion status
+ * @param {number} id - Task ID
+ * @param {boolean} completed - New completion status
+ * @returns {Promise<Object>} Updated task
+ * @throws {Error} API error
+ */
+export const toggleTaskCompletion = async (id, completed) => {
+  try {
+    const response = await axios.patch(`${API_BASE_URL}/todos/${id}`, {
+      completed,
+    });
+    return response.data;
+  } catch (error) {
+    throw new Error('Failed to update task: ' + error.message);
+  }
+};

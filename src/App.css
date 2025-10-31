@@ -1,0 +1,22 @@
+/* Minimal App-level styles. Tailwind utilities are loaded via src/index.css */
+:root {
+  --app-max-width: 1200px;
+}
+
+body {
+  margin: 0;
+}
+
+.container {
+  max-width: var(--app-max-width);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* small helpers used in a few components */
+.sr-only {
+  position: absolute !important;
+  height: 1px; width: 1px; overflow: hidden;
+  clip: rect(1px, 1px, 1px, 1px);
+  white-space: nowrap;
+}
